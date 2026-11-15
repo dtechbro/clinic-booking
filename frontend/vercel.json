@@ -1,0 +1,1 @@
+{"framework":"vite","buildCommand":"cd .. && npm run build -w frontend","outputDirectory":"dist","installCommand":"cd .. && npm ci","rewrites":[{"source":"/((?!api/).*)","destination":"/index.html"}]}
