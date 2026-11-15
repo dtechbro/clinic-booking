@@ -1,4 +1,17 @@
 import {test,expect} from '@playwright/test';
+test('Vercel routing metadata is removed while API query validation remains strict',async({request})=>{
+ const slots=await request.get('/api/slots?page=1&limit=12&...path=slots');
+ expect(slots.status()).toBe(200);
+ expect(await slots.json()).toMatchObject({page:1,limit:12});
+ const bookings=await request.get('/api/bookings?page=1&limit=5&...path=bookings',{
+  headers:{'X-Patient-Token':'a'.repeat(64)}
+ });
+ expect(bookings.status()).toBe(200);
+ expect(await bookings.json()).toMatchObject({page:1,limit:5});
+ const invalid=await request.get('/api/slots?page=1&limit=12&...path=slots&unexpected=value');
+ expect(invalid.status()).toBe(400);
+ expect((await invalid.json()).error.code).toBe('validation_error');
+});
 test('Book, confirm, reload, look up and cancel through the production proxy',async({page})=>{
  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto('/');await expect(page.getByRole('heading',{name:'Make room for your health.'})).toBeVisible();

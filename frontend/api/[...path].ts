@@ -3,6 +3,9 @@ import type { IncomingMessage,ServerResponse } from 'node:http';
 export default async function handler(req:IncomingMessage & {body?:unknown},res:ServerResponse) {
  res.setHeader('Cache-Control','no-store');
  const url=new URL(req.url ?? '/', 'https://local.invalid');
+ // Vercel injects the catch-all route name into the query string.
+ // It is routing metadata, not an API query parameter.
+ url.searchParams.delete('...path');
  if(!/^\/api\/(slots|bookings)(\/[0-9a-f-]{36})?$/.test(url.pathname) || !['GET','POST','DELETE'].includes(req.method ?? '')) {
   res.statusCode=404;res.end(JSON.stringify({error:{message:'Route not found.'}}));return;
  }
