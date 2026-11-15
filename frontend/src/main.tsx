@@ -10,7 +10,9 @@ const tokenKey='carewell-patient-token';
 async function api(path:string,init:RequestInit={}){
  const token=localStorage.getItem(tokenKey);
  const response=await fetch(`/api${path}`,{...init,headers:{'Content-Type':'application/json',...(token?{'X-Patient-Token':token}:{}),...init.headers}});
- const body=await response.json();
+ let body;
+ try { body=await response.json(); }
+ catch { throw new Error('The booking service returned an unexpected response. Please try again.'); }
  if(!response.ok)throw new Error(body.error?.message || 'Unable to complete your request.');
  return body;
 }

@@ -2,13 +2,17 @@
 import {createServer} from 'node:http';
 import {readFile} from 'node:fs/promises';
 import {resolve,extname} from 'node:path';
-import handler from '../frontend/api/[...path].js';
+import slotsHandler from '../frontend/api/slots.js';
+import bookingsHandler from '../frontend/api/bookings.js';
+import bookingHandler from '../frontend/api/bookings/[id].js';
 const root=resolve('frontend/dist');
 createServer(async(req,res)=>{
  try{
   const path=new URL(req.url??'/','http://local').pathname;
   if(path.startsWith('/api/')){
    let body='';for await(const chunk of req){body+=chunk;if(body.length>8192){res.statusCode=413;res.end();return;}}
+   const handler=path==='/api/slots'?slotsHandler:path==='/api/bookings'?bookingsHandler:/^\/api\/bookings\/[^/]+$/.test(path)?bookingHandler:null;
+   if(!handler){res.statusCode=404;res.end('The page could not be found');return;}
    await handler(Object.assign(req,{body:body?JSON.parse(body):undefined}),res);return;
   }
   const file=resolve(root,`.${path==='/'?'/index.html':path}`);

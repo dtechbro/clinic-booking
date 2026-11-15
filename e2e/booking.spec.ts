@@ -20,6 +20,10 @@ test('Book, confirm, reload, look up and cancel through the production proxy',as
  await page.getByLabel('Full name').fill('Browser Test Patient');await page.getByLabel('Email address').fill('browser@example.com');
  await page.getByRole('button',{name:'Confirm appointment'}).click();await expect(page.getByRole('heading',{name:'Your visit is booked.'})).toBeVisible();
  const reference=await page.locator('.ticket code').innerText();
+ const token=await page.evaluate(()=>localStorage.getItem('carewell-patient-token'));
+ const nested=await page.request.get(`/api/bookings/${reference}?id=${reference}`,{headers:{'X-Patient-Token':token!}});
+ expect(nested.status()).toBe(200);
+ expect((await nested.json()).data.id).toBe(reference);
  await page.reload();await page.getByRole('button',{name:'My appointments',exact:true}).click();
  await expect(page.locator('.booking').filter({hasText:reference})).toBeVisible();
  await page.getByLabel('Look up a booking').fill(reference);await page.getByRole('button',{name:'Find booking'}).click();
@@ -28,6 +32,9 @@ test('Book, confirm, reload, look up and cancel through the production proxy',as
  page.once('dialog',dialog=>dialog.accept());
  await page.locator('.booking').filter({hasText:reference}).getByRole('button',{name:'Cancel visit'}).click();
  await expect(page.locator('.booking').filter({hasText:reference}).locator('.badge')).toHaveText('cancelled');
+ const cancelled=await page.request.delete(`/api/bookings/${reference}?id=${reference}`,{headers:{'X-Patient-Token':token!}});
+ expect(cancelled.status()).toBe(200);
+ expect((await cancelled.json()).data.status).toBe('cancelled');
  expect(errors).toEqual([]);
 });
 test('Mobile layout and empty-state date filter',async({page})=>{
@@ -38,4 +45,10 @@ test('Mobile layout and empty-state date filter',async({page})=>{
  await page.getByLabel('Filter by date').fill('2099-01-01');
  await expect(page.getByText('No available appointments for this selection. Try another date.')).toBeVisible();
  await page.screenshot({path:'test-results/mobile.png',fullPage:true});
+});
+
+test('A platform text error displays a useful message instead of a JSON parser error',async({page})=>{
+ await page.route('**/api/slots?*',route=>route.fulfill({status:404,contentType:'text/plain',body:'The page could not be found\nNOT_FOUND'}));
+ await page.goto('/');
+ await expect(page.getByRole('alert')).toContainText('The booking service returned an unexpected response. Please try again.');
 });
